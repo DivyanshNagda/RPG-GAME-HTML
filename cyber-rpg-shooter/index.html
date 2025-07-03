@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyberStrike RPG - Futuristic 3D Shooter</title>
+    <meta name="description" content="High-graphics physics-based RPG shooter with Three.js and Ammo.js" />
+    
+    <!-- Three.js Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js"></script>
+    
+    <!-- Three.js Additional Modules -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    
+    <!-- Ammo.js Physics -->
+    <script src="https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/builds/ammo.wasm.js"></script>
+    
+    <!-- Game Styles -->
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-content">
+        <div class="loading-logo">CyberStrike</div>
+        <div class="loading-bar">
+          <div class="loading-progress" id="loading-progress"></div>
+        </div>
+        <div class="loading-text" id="loading-text">Initializing Physics Engine...</div>
+      </div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu" class="hidden">
+      <div class="menu-background"></div>
+      <div class="menu-content">
+        <h1 class="game-title">CyberStrike</h1>
+        <p class="game-subtitle">Futuristic RPG Shooter</p>
+        <div class="menu-buttons">
+          <button id="start-game" class="menu-btn primary">Start Game</button>
+          <button id="load-game" class="menu-btn">Load Game</button>
+          <button id="achievements-btn" class="menu-btn">Achievements</button>
+          <button id="settings" class="menu-btn">Settings</button>
+          <button id="tutorial" class="menu-btn">Tutorial</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Game HUD -->
+    <div id="game-hud" class="hidden">
+      <!-- Health and Status -->
+      <div class="hud-top-left">
+        <div class="health-container">
+          <div class="health-label">HEALTH</div>
+          <div class="health-bar">
+            <div class="health-fill" id="health-fill"></div>
+          </div>
+          <div class="health-text" id="health-text">100/100</div>
+        </div>
+        
+        <div class="player-stats">
+          <div class="stat-item">
+            <span class="stat-label">LEVEL</span>
+            <span class="stat-value" id="player-level">1</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">XP</span>
+            <span class="stat-value" id="player-xp">0/100</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weapon Info -->
+      <div class="hud-top-right">
+        <div class="weapon-info">
+          <div class="weapon-name" id="weapon-name">PLASMA RIFLE</div>
+          <div class="ammo-counter">
+            <span class="ammo-current" id="ammo-current">30</span>
+            <span class="ammo-separator">/</span>
+            <span class="ammo-total" id="ammo-total">120</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Crosshair -->
+      <div class="crosshair">
+        <div class="crosshair-dot"></div>
+        <div class="crosshair-lines">
+          <div class="crosshair-line top"></div>
+          <div class="crosshair-line right"></div>
+          <div class="crosshair-line bottom"></div>
+          <div class="crosshair-line left"></div>
+        </div>
+      </div>
+
+      <!-- Mini Map -->
+      <div class="hud-bottom-right">
+        <div class="minimap">
+          <canvas id="minimap-canvas" width="150" height="150"></canvas>
+        </div>
+      </div>
+
+      <!-- Inventory -->
+      <div class="hud-bottom-left">
+        <div class="hotbar">
+          <div class="hotbar-slot active" data-slot="0">
+            <div class="slot-icon">🔫</div>
+            <div class="slot-key">1</div>
+          </div>
+          <div class="hotbar-slot" data-slot="1">
+            <div class="slot-icon">💣</div>
+            <div class="slot-key">2</div>
+          </div>
+          <div class="hotbar-slot" data-slot="2">
+            <div class="slot-icon">🛡️</div>
+            <div class="slot-key">3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="hidden">
+      <div class="pause-overlay"></div>
+      <div class="pause-content">
+        <h2>Game Paused</h2>
+        <div class="pause-buttons">
+          <button id="resume-game" class="menu-btn primary">Resume</button>
+          <button id="save-game" class="menu-btn">Save Game</button>
+          <button id="load-pause" class="menu-btn">Load Game</button>
+          <button id="settings-pause" class="menu-btn">Settings</button>
+          <button id="main-menu-btn" class="menu-btn">Main Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settings-menu" class="hidden">
+      <div class="settings-overlay"></div>
+      <div class="settings-content">
+        <h2>Settings</h2>
+        <div class="settings-panel">
+          <div class="setting-group">
+            <h3>Graphics</h3>
+            <div class="setting-item">
+              <label>Quality</label>
+              <select id="graphics-quality">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label>Resolution</label>
+              <select id="resolution">
+                <option value="1920x1080" selected>1920x1080</option>
+                <option value="1366x768">1366x768</option>
+                <option value="1280x720">1280x720</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="setting-group">
+            <h3>Audio</h3>
+            <div class="setting-item">
+              <label>Master Volume</label>
+              <input type="range" id="master-volume" min="0" max="100" value="70">
+            </div>
+            <div class="setting-item">
+              <label>SFX Volume</label>
+              <input type="range" id="sfx-volume" min="0" max="100" value="80">
+            </div>
+          </div>
+          
+          <div class="setting-group">
+            <h3>Controls</h3>
+            <div class="setting-item">
+              <label>Mouse Sensitivity</label>
+              <input type="range" id="mouse-sensitivity" min="0.1" max="5" step="0.1" value="1">
+            </div>
+            <div class="setting-item">
+              <label>Show Performance Monitor</label>
+              <input type="checkbox" id="show-performance">
+            </div>
+            <div class="setting-item">
+              <label>Show Debug Console</label>
+              <input type="checkbox" id="show-debug">
+            </div>
+            <div class="setting-item">
+              <label>Auto-Quality Adjustment</label>
+              <input type="checkbox" id="auto-quality" checked>
+            </div>
+          </div>
+        </div>
+        <button id="close-settings" class="menu-btn primary">Close</button>
+      </div>
+    </div>
+
+    <!-- Tutorial Overlay -->
+    <div id="tutorial-overlay" class="hidden">
+      <div class="tutorial-content">
+        <h3 id="tutorial-title">Welcome to CyberStrike!</h3>
+        <p id="tutorial-text">Use WASD to move, mouse to look around, and left click to shoot.</p>
+        <div class="tutorial-controls">
+          <button id="tutorial-prev" class="tutorial-btn">Previous</button>
+          <button id="tutorial-next" class="tutorial-btn primary">Next</button>
+          <button id="tutorial-skip" class="tutorial-btn">Skip</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Achievements Panel -->
+    <div id="achievements-panel" class="hidden">
+      <div class="achievements-overlay"></div>
+      <div class="achievements-content">
+        <h2>Achievements</h2>
+        <div class="achievements-grid" id="achievements-grid">
+          <!-- Achievements will be dynamically generated -->
+        </div>
+        <button id="close-achievements" class="menu-btn primary">Close</button>
+      </div>
+    </div>
+
+    <!-- Skills Panel -->
+    <div id="skills-panel" class="hidden">
+      <div class="skills-overlay"></div>
+      <div class="skills-content">
+        <h2>Skills & Upgrades</h2>
+        <div class="skills-grid">
+          <div class="skill-tree">
+            <div class="skill-category">
+              <h3>Combat</h3>
+              <div class="skill-item" data-skill="damage">
+                <div class="skill-icon">⚔️</div>
+                <div class="skill-info">
+                  <div class="skill-name">Weapon Damage</div>
+                  <div class="skill-level">Level <span id="damage-level">1</span></div>
+                </div>
+                <button class="skill-upgrade" id="upgrade-damage">Upgrade</button>
+              </div>
+              <div class="skill-item" data-skill="reload">
+                <div class="skill-icon">🔄</div>
+                <div class="skill-info">
+                  <div class="skill-name">Fast Reload</div>
+                  <div class="skill-level">Level <span id="reload-level">1</span></div>
+                </div>
+                <button class="skill-upgrade" id="upgrade-reload">Upgrade</button>
+              </div>
+            </div>
+            <div class="skill-category">
+              <h3>Defense</h3>
+              <div class="skill-item" data-skill="health">
+                <div class="skill-icon">❤️</div>
+                <div class="skill-info">
+                  <div class="skill-name">Max Health</div>
+                  <div class="skill-level">Level <span id="health-level">1</span></div>
+                </div>
+                <button class="skill-upgrade" id="upgrade-health">Upgrade</button>
+              </div>
+              <div class="skill-item" data-skill="armor">
+                <div class="skill-icon">🛡️</div>
+                <div class="skill-info">
+                  <div class="skill-name">Armor</div>
+                  <div class="skill-level">Level <span id="armor-level">1</span></div>
+                </div>
+                <button class="skill-upgrade" id="upgrade-armor">Upgrade</button>
+              </div>
+            </div>
+            <div class="skill-category">
+              <h3>Mobility</h3>
+              <div class="skill-item" data-skill="speed">
+                <div class="skill-icon">💨</div>
+                <div class="skill-info">
+                  <div class="skill-name">Movement Speed</div>
+                  <div class="skill-level">Level <span id="speed-level">1</span></div>
+                </div>
+                <button class="skill-upgrade" id="upgrade-speed">Upgrade</button>
+              </div>
+              <div class="skill-item" data-skill="jump">
+                <div class="skill-icon">🦘</div>
+                <div class="skill-info">
+                  <div class="skill-name">Jump Power</div>
+                  <div class="skill-level">Level <span id="jump-level">1</span></div>
+                </div>
+                <button class="skill-upgrade" id="upgrade-jump">Upgrade</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="skill-points">
+          <span>Skill Points: <span id="skill-points">0</span></span>
+        </div>
+        <button id="close-skills" class="menu-btn primary">Close</button>
+      </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls" class="hidden">
+      <div class="mobile-joystick-container">
+        <div class="mobile-joystick" id="movement-joystick">
+          <div class="joystick-knob"></div>
+        </div>
+      </div>
+      <div class="mobile-buttons">
+        <button class="mobile-btn" id="mobile-jump">JUMP</button>
+        <button class="mobile-btn" id="mobile-shoot">FIRE</button>
+        <button class="mobile-btn" id="mobile-reload">RELOAD</button>
+        <button class="mobile-btn" id="mobile-pause">PAUSE</button>
+      </div>
+      <div class="mobile-weapon-switch">
+        <button class="mobile-weapon-btn" data-weapon="0">1</button>
+        <button class="mobile-weapon-btn" data-weapon="1">2</button>
+        <button class="mobile-weapon-btn" data-weapon="2">3</button>
+      </div>
+    </div>
+
+    <!-- Performance Monitor -->
+    <div id="performance-monitor" class="hidden">
+      <div class="perf-item">
+        <span>FPS: <span id="fps-counter">60</span></span>
+      </div>
+      <div class="perf-item">
+        <span>Objects: <span id="object-counter">0</span></span>
+      </div>
+      <div class="perf-item">
+        <span>Memory: <span id="memory-counter">0MB</span></span>
+      </div>
+    </div>
+
+    <!-- Game Stats Overlay -->
+    <div id="game-stats" class="hidden">
+      <div class="stats-container">
+        <h3>Game Statistics</h3>
+        <div class="stat-row">
+          <span class="stat-label">Enemies Defeated:</span>
+          <span class="stat-value" id="enemies-killed">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Shots Fired:</span>
+          <span class="stat-value" id="shots-fired">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Accuracy:</span>
+          <span class="stat-value" id="accuracy">0%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Play Time:</span>
+          <span class="stat-value" id="play-time">0:00</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Distance Traveled:</span>
+          <span class="stat-value" id="distance-traveled">0m</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Assets Progress -->
+    <div id="asset-loading" class="hidden">
+      <div class="asset-progress">
+        <div class="asset-item">
+          <span>Models:</span>
+          <div class="asset-bar"><div class="asset-fill" id="models-progress"></div></div>
+        </div>
+        <div class="asset-item">
+          <span>Textures:</span>
+          <div class="asset-bar"><div class="asset-fill" id="textures-progress"></div></div>
+        </div>
+        <div class="asset-item">
+          <span>Audio:</span>
+          <div class="asset-bar"><div class="asset-fill" id="audio-progress"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Damage Numbers -->
+    <div id="damage-numbers-container"></div>
+
+    <!-- Weather Effects -->
+    <div id="weather-overlay" class="hidden"></div>
+
+    <!-- Notification System -->
+    <div id="notification-container"></div>
+
+    <!-- Debug Console -->
+    <div id="debug-console" class="hidden">
+      <div class="debug-header">
+        <h4>Debug Console</h4>
+        <button id="clear-debug">Clear</button>
+        <button id="close-debug">Close</button>
+      </div>
+      <div class="debug-content" id="debug-content"></div>
+      <div class="debug-input">
+        <input type="text" id="debug-command" placeholder="Enter command...">
+        <button id="execute-debug">Execute</button>
+      </div>
+    </div>
+
+    <!-- Game Script -->
+    <script src="game.js"></script>
+  </body>
+</html>
